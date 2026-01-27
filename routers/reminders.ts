@@ -1,29 +1,28 @@
-import { Router, Request, Response } from 'express';
-import createReminderSchema from '../Dtos/create-reminder.dto';
+import { Router, Request, Response } from "express";
 import Reminder from "../models/reminder";
+import createReminderSchema from "../dtos/create-reminder.dto";
 
 const router = Router();
-let reminders: Reminder[]= [];
 
-router.get('/',(req, res)=>{
-    res.json(reminders);
-})
+const reminders: Reminder[] = [];
 
-
-router.post('/', (req: Request, res: Response) => {
+router.post("/", (req: Request, res: Response) => {
   const { error } = createReminderSchema.validate(req.body);
 
-    if (error) {
+  if (error) {
     return res.status(400).json({
-        message: error.details?.[0]?.message || 'Validation error'
+      message: error.details[0]?.message,
     });
-    }
+  }
 
-  res.status(201).json({
-    message: 'Reminder created',
-    data: req.body
-  });
+  const reminder = new Reminder(req.body.title);
+  reminders.push(reminder);
+
+  res.status(201).json(reminder);
 });
-  
 
-export default router; 
+router.get("/", (req: Request, res: Response) => {
+  res.json(reminders);
+});
+
+export default router;
