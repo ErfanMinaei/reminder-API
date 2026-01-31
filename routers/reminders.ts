@@ -42,13 +42,24 @@ router.patch('/:id', async (req: Request, res: Response) => {
   }
 });
 
-router.delete('/:id', async(req: Request, res: Response)=>{
-  const reminder = await prisma.reminders.delete({
-    where: {
-      id: Number(req.params.id),
+router.delete('/:id', async (req: Request, res: Response) => {
+  try {
+    const reminder = await prisma.reminders.delete({
+      where: {
+        id: Number(req.params.id),
+      },
+    });
+
+    res.status(200).json(reminder);
+  } catch (err) {
+    if (err instanceof Error) {
+      console.error('there is an error in assigning', err.message);
+    } else {
+      console.error('there is an unknown error', err);
     }
-  })
-})
+    res.status(404).json({ error: 'Reminder not found' });
+}});
+
 
 router.get("/", async(req: Request, res: Response) => {
   const reminders = await prisma.reminders.findMany();
