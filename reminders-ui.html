@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reminders App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 600px;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 32px;
+            text-align: center;
+        }
+
+        .reminders-list {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+
+        .reminder-item {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .reminder-item:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+        }
+
+        .reminder-item.completed {
+            background: #e8f5e9;
+            opacity: 0.7;
+        }
+
+        .checkbox {
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            accent-color: #667eea;
+        }
+
+        .reminder-title {
+            flex: 1;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .reminder-item.completed .reminder-title {
+            text-decoration: line-through;
+            color: #999;
+        }
+
+        .reminder-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .btn-edit {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .btn-edit:hover {
+            background: #ffb300;
+            transform: scale(1.05);
+        }
+
+        .btn-delete {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #d32f2f;
+            transform: scale(1.05);
+        }
+
+        .add-reminder-container {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .input-reminder {
+            flex: 1;
+            padding: 14px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-reminder:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn-add {
+            background: #667eea;
+            color: white;
+            padding: 14px 24px;
+            font-size: 24px;
+            width: 56px;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .btn-add:hover {
+            background: #5568d3;
+            transform: rotate(90deg) scale(1.1);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+            font-size: 18px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .edit-mode {
+            background: #fff3cd !important;
+            border-color: #ffc107 !important;
+        }
+
+        .edit-input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .edit-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-save {
+            background: #4caf50;
+            color: white;
+        }
+
+        .btn-save:hover {
+            background: #45a049;
+        }
+
+        .btn-cancel {
+            background: #9e9e9e;
+            color: white;
+        }
+
+        .btn-cancel:hover {
+            background: #757575;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .reminder-item {
+            animation: fadeIn 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 My Reminders</h1>
+        
+        <ul class="reminders-list" id="remindersList">
+            <div class="loading">Loading reminders...</div>
+        </ul>
+
+        <div class="add-reminder-container">
+            <input 
+                type="text" 
+                class="input-reminder" 
+                id="newReminderInput" 
+                placeholder="Add a new reminder..."
+                onkeypress="handleKeyPress(event)"
+            >
+            <button class="btn btn-add" onclick="addReminder()">+</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/reminders';
+        let editingId = null;
+
+        // Load reminders on page load
+        document.addEventListener('DOMContentLoaded', loadReminders);
+
+        async function loadReminders() {
+            try {
+                const response = await fetch(API_URL);
+                const reminders = await response.json();
+                
+                const listElement = document.getElementById('remindersList');
+                
+                if (reminders.length === 0) {
+                    listElement.innerHTML = '<div class="empty-state">No reminders yet. Add one below! 👇</div>';
+                    return;
+                }
+
+                listElement.innerHTML = reminders.map(reminder => createReminderHTML(reminder)).join('');
+            } catch (error) {
+                console.error('Error loading reminders:', error);
+                document.getElementById('remindersList').innerHTML = 
+                    '<div class="empty-state">Error loading reminders. Please make sure the server is running on port 8000.</div>';
+            }
+        }
+
+        function createReminderHTML(reminder) {
+            const isCompleted = reminder.isComplete || false;
+            
+            if (editingId === reminder.id) {
+                return `
+                    <li class="reminder-item edit-mode" data-id="${reminder.id}">
+                        <input type="text" class="edit-input" id="edit-input-${reminder.id}" value="${reminder.title}">
+                        <div class="edit-actions">
+                            <button class="btn btn-save" onclick="saveEdit(${reminder.id})">Save</button>
+                            <button class="btn btn-cancel" onclick="cancelEdit()">Cancel</button>
+                        </div>
+                    </li>
+                `;
+            }
+
+            return `
+                <li class="reminder-item ${isCompleted ? 'completed' : ''}" data-id="${reminder.id}">
+                    <input 
+                        type="checkbox" 
+                        class="checkbox" 
+                        ${isCompleted ? 'checked' : ''}
+                        onchange="toggleComplete(${reminder.id}, this.checked)"
+                    >
+                    <span class="reminder-title">${reminder.title}</span>
+                    <div class="reminder-actions">
+                        <button class="btn btn-edit" onclick="editReminder(${reminder.id})">Edit</button>
+                        <button class="btn btn-delete" onclick="deleteReminder(${reminder.id})">Delete</button>
+                    </div>
+                </li>
+            `;
+        }
+
+        async function addReminder() {
+            const input = document.getElementById('newReminderInput');
+            const title = input.value.trim();
+
+            if (!title) {
+                alert('Please enter a reminder title');
+                return;
+            }
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ title }),
+                });
+
+                if (response.ok) {
+                    input.value = '';
+                    await loadReminders();
+                }
+            } catch (error) {
+                console.error('Error adding reminder:', error);
+                alert('Failed to add reminder');
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                addReminder();
+            }
+        }
+
+        function editReminder(id) {
+            editingId = id;
+            loadReminders();
+            setTimeout(() => {
+                const input = document.getElementById(`edit-input-${id}`);
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }, 100);
+        }
+
+        async function saveEdit(id) {
+            const input = document.getElementById(`edit-input-${id}`);
+            const title = input.value.trim();
+
+            if (!title) {
+                alert('Please enter a reminder title');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ title }),
+                });
+
+                if (response.ok) {
+                    editingId = null;
+                    await loadReminders();
+                }
+            } catch (error) {
+                console.error('Error updating reminder:', error);
+                alert('Failed to update reminder');
+            }
+        }
+
+        function cancelEdit() {
+            editingId = null;
+            loadReminders();
+        }
+
+        async function deleteReminder(id) {
+            if (!confirm('Are you sure you want to delete this reminder?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/${id}`, {
+                    method: 'DELETE',
+                });
+
+                if (response.ok) {
+                    await loadReminders();
+                }
+            } catch (error) {
+                console.error('Error deleting reminder:', error);
+                alert('Failed to delete reminder');
+            }
+        }
+
+        async function toggleComplete(id, isComplete) {
+            // Note: Your backend doesn't currently have an isComplete field
+            // You'll need to add this to your Prisma schema and migration
+            // For now, this function is here but won't persist the state
+            console.log(`Reminder ${id} marked as ${isComplete ? 'complete' : 'incomplete'}`);
+            
+            // Uncomment this when you add isComplete to your schema:
+            /*
+            try {
+                await fetch(`${API_URL}/${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ isComplete }),
+                });
+            } catch (error) {
+                console.error('Error toggling complete:', error);
+            }
+            */
+        }
+    </script>
+</body>
+</html>
