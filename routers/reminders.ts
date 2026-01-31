@@ -24,6 +24,32 @@ router.post("/", async (req: Request, res: Response) => {
   res.status(201).json(reminder);
 });
 
+router.patch('/:id', async (req: Request, res: Response) => {
+  try {
+    const reminder = await prisma.reminders.update({
+      where: {
+        id: Number(req.params.id),
+      },
+      data: {
+        title: req.body.title,
+      },
+    });
+
+    res.json(reminder);
+  } catch (err: any) {
+    console.error('there is an error in assigning', err.message);
+    res.status(500).json({ error: 'Update failed' });
+  }
+});
+
+router.delete('/:id', async(req: Request, res: Response)=>{
+  const reminder = await prisma.reminders.delete({
+    where: {
+      id: Number(req.params.id),
+    }
+  })
+})
+
 router.get("/", async(req: Request, res: Response) => {
   const reminders = await prisma.reminders.findMany();
   res.json(reminders);
