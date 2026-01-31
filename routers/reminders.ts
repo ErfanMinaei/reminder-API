@@ -1,12 +1,12 @@
 import { Router, Request, Response } from "express";
 import Reminder from "../models/reminder";
 import createReminderSchema from "../dtos/create-reminder.dto";
+import prisma from "../prisma";
 
 const router = Router();
 
-const reminders: Reminder[] = [];
 
-router.post("/", (req: Request, res: Response) => {
+router.post("/", async (req: Request, res: Response) => {
   const { error } = createReminderSchema.validate(req.body);
 
   if (error) {
@@ -15,13 +15,17 @@ router.post("/", (req: Request, res: Response) => {
     });
   }
 
-  const reminder = new Reminder(req.body.title);
-  reminders.push(reminder);
+  const reminder = await prisma.reminders.create({
+    data:{
+      title: req.body.title
+    }
+  });
 
   res.status(201).json(reminder);
 });
 
-router.get("/", (req: Request, res: Response) => {
+router.get("/", async(req: Request, res: Response) => {
+  const reminders = await prisma.reminders.findMany();
   res.json(reminders);
 });
 
